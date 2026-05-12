@@ -1,9 +1,9 @@
-Midjourney
+Midjourney v8.1
    │
    ▼
 Text / Numbers?
    │
-   ├── Yes ──▶ ChatGPT Images
+   ├── Yes ──▶ ChatGPT Images 2
    │              │
    └── No  ──▶ Nano Banana Pro
                   │
@@ -11,7 +11,7 @@ Text / Numbers?
         Output: 2K resolution image
                   │
                   ▼
-              Seedance
+              Seedance 2
 
 Tip: For longer / more complex sequences,
      use a storyboard for fine control.
