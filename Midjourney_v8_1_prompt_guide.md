@@ -1,991 +1,454 @@
-# Midjourney v8.1 — AI Prompt Reference
+# Midjourney V8.1 — AI-Consumption Prompt Reference Guide
 
-Version: V8.1 (released to `midjourney.com` April 30, 2026; V8.1 Alpha shipped on `alpha.midjourney.com` April 14, 2026; later released to Discord). V8.1 is an evolution of V8.0 with V7-spirit aesthetics, native 2K HD by default, and restored image prompts. Several legacy parameters are temporarily limited in V8.1 — those are flagged inline.
-
----
-
-## Parameters Go At The End
-
-All `--flags` go at the end of the prompt text, after a single space. No commas or punctuation inside the parameter block. One double-hyphen `--`, not a single hyphen, not a spaced hyphen.
-
-`vibrant California poppies --ar 2:3 --s 100 --v 8.1` ✅
-`vibrant California poppies--ar 2:3` ❌ (no space)
-`vibrant California --ar 2:3 poppies` ❌ (text after parameters)
+> **File type:** Reference document for LLM ingestion. Optimized for machine parsing, not human reading. Use as system/context input when generating Midjourney V8.1 prompts for advanced/pro users.
 
 ---
 
-## Version Selection
+## TL;DR
 
-`--v 8.1` selects V8.1. `--v 8` selects V8.0 (decommissioning expected). `--v 7` selects V7 (legacy default). `--niji 7` selects anime model. Set default version in settings panel.
-
-```
---v 8.1     # current, fastest, native 2K, V7-aesthetic
---v 8       # alpha, hyper-polished, less stable srefs
---v 7       # legacy flagship, atmospheric, painterly
---niji 7    # anime/manga, best linework
---niji 6    # legacy anime, has --style options
-```
-
-Personalization Global V7/V8 Profile must be unlocked before using V8.1.
+- **Midjourney V8.1 went stable on April 30, 2026** on `midjourney.com` and Discord (alpha launched April 14, 2026 on `alpha.midjourney.com`). It is Midjourney's fastest model: HD/2K is default, ~4–5× faster than earlier versions, and the V8.0 aesthetic has been rolled back to "the spirit of V7." V8.0 is being decommissioned.
+- **Use this guide as ground truth for prompt construction.** Section `<SYNTAX>` defines exact parameter grammar; `<PARAMS>` is the canonical compatibility/range table; `<TEMPLATES>` provides parameterized prompt skeletons; `<RULES>` enumerates hard constraints; `<FAILURE_MODES>` lists known V8.1 weaknesses to avoid.
+- **Major V8.1-specific differences vs. V7/V8.0:** HD (2048-px native) is default; `--iw` image weights are back; new auto Prompt Shortener; updated `Describe`; seeds are ~99% reproducible; moodboards/`--sref` are super-stable; `--oref`, `--cref`, and the V8 upscaler/editor are NOT YET available in V8.1 (Editor/Pan/Zoom still fall back to V6.1); a Global V7/V8 Personalization Profile MUST be unlocked before V8.1 will run.
 
 ---
 
-## Resolution: HD vs SD in V8.1
-
-V8.1 default is HD (native 2K, ~2048px on long edge). HD costs ~1.33 GPU minutes; SD < 1 GPU minute. HD is 3× faster + 3× cheaper than V8.0 HD. SD is 50% faster + 25% cheaper than V8.0 SD; SD at full quality runs as fast as V7 draft mode.
-
-```
---hd        # force native 2K (default on V8.1)
---sd        # force standard resolution (~1K)
-```
-
-`Run as HD` web button reruns a seed-locked SD job in HD. It is **not** an upscaler; the seed may not perfectly preserve the SD image. To guarantee HD, generate with `--hd` from the start.
-
----
-
-## --ar (Aspect Ratio)
-
-`--ar W:H` or `--aspect W:H`. Default `1:1`. No decimals — use `139:100` not `1.39:1`. Extreme ratios beyond ~2:1 are experimental and unstable. Some upscalers/editor passes may slightly shift the ratio.
-
-```
---ar 1:1    # square; social profile, icons, tiles
---ar 4:5    # portrait social feed (Instagram)
---ar 5:4    # near-square landscape; presentations
---ar 2:3    # vertical print, Pinterest, book covers
---ar 3:2    # classic photo print, landscape
---ar 16:9   # widescreen, video thumbnails, environments
---ar 9:16   # vertical video, Stories, mobile
---ar 21:9   # cinematic ultrawide, anamorphic
---ar 6:11   # tall portrait, phone wallpapers
---ar 7:4    # close to HD TV / smartphone
-```
-
-Wide ratios push environment/context. Tall ratios push subject focus and headroom.
-
----
-
-## --stylize / --s
-
-Range `0–1000`. Default `100`. Controls how much Midjourney applies its trained aesthetic.
-
-```
---s 0–50      # literal, product, technical accuracy
---s 50–150    # default-band; most photoreal portraits
---s 150–300   # editorial, mood-driven
---s 300–600   # illustrative, concept art
---s 600–1000  # heavily stylized, surreal
-```
-
-V8/V8.1 caveat: extreme `--s` is less radical than V7. For visible style shift in V8.1 use `--s 400+`. For text legibility, drop `--s` to `25` or `0`.
-
----
-
-## --chaos / --c
-
-Range `0–100`. Default `0`. Controls variance across the four images in a grid.
-
-```
---c 0      # tight, four near-identical
---c 10–25  # slight variance, controlled exploration
---c 25–50  # broader exploration
---c 50–75  # divergent compositions per cell
---c 75–100 # near-random; prompt adherence drops
-```
-
-`--c` combined with locked `--seed` produces structured divergence rather than randomness. Use `--c 50` + `--s 500` for diverse-but-coherent ideation.
-
----
-
-## --weird / --w
-
-Range `0–3000`. Default `0`. Adds unconventional / experimental aesthetic deviations. Experimental flag — behavior changes between versions. Not fully compatible with `--seed`. Returns of effect are non-linear; >500 yields diminishing strangeness, >1000 stabilizes into different bizarre archetypes.
-
-```
---w 0          # standard
---w 100–500    # subtle quirks; recommended starting band
---w 500–1000   # noticeable strangeness
---w 1000–3000  # surreal; prompt fidelity collapses
-```
-
-`--weird` ≠ `--chaos`. `--chaos` spreads the four-grid; `--weird` bends individual aesthetics. Stack with `--s` of equal value (e.g., `--s 700 --w 700`) to preserve aesthetic coherence at high weirdness.
-
----
-
-## --quality / --q
-
-Values: `1` (default), `2`, `4`. `--q 3` auto-promotes to `--q 4`. Cost scales linearly with the value (2× for `--q 2`, 4× for `--q 4`). Affects only the initial 4-image grid, not variations/upscales/edits.
-
-```
---q 1   # default
---q 2   # 2x compute, denser detail
---q 4   # 4x compute, max coherence; not compatible with --oref
-```
-
-`--hd` + `--q 4` together costs 16× a base SD job in V8.0; in V8.1 the multiplier is reduced (~1.5–2.5× for HD overall) but combined HD + `--q 4` is the most expensive combination and is excluded from Relax Mode.
-
----
-
-## --seed
-
-Whole integers `0` – `4294967295`. Same prompt + same seed produces near-identical results. V8.1 Alpha: seeds reproduce ~99% identical. Seeds affect only the initial grid, not variations or upscales.
-
-```
---seed 12345
-```
-
-Use cases: lock a composition while iterating prompt text; produce series with identical lighting/composition; A/B test parameters against a fixed base.
-
----
-
-## --sref (Style Reference)
-
-Transfers visual style (palette, lighting, technique, mood) from a reference image or numeric code. Does not transfer subject, identity, or composition.
-
-```
---sref https://image.url
---sref https://url1 https://url2          # blend multiple
---sref 1234567890                          # internal style code
---sref random                              # random style code (resolves to a fixed code)
---sref URL1::2 URL2::1 URL3::1             # weighted refs (Discord; V6/V7)
-```
-
-`--sref random` resolves to a fixed numeric code on submit, allowing reuse. Permutations + `--sref random` produce a different code per permutation.
-
-Acceptable input formats: `.png .gif .webp .jpg .jpeg`. Must be public URL.
-
-### --sw (Style Weight)
-
-Range `0–1000`. Default `100`. Higher = stronger style adherence. `--sw` is more impactful with numeric style codes than with reference images. `--sw` is **not** compatible with Moodboards.
-
-```
---sw 0–50      # subtle hint
---sw 50–150    # balanced
---sw 150–300   # strong style match
---sw 300–1000  # dominant style
-```
-
-### --sv (Style Reference Version)
-
-Selects the underlying SREF algorithm.
-
-```
---sv 4   # old V7 sref engine (pre June 16, 2025)
---sv 6   # default for V7
---sv 7   # default for V8 / V8.1 (4× faster + 4× cheaper than --sv 6; supports --hd, --p, --stylize, --exp)
-```
-
-`--sref random` and numeric `--sref` codes are compatible only with `--sv 4` and `--sv 6`.
-
----
-
-## --cref (Character Reference) — V6 / Niji 6 Only
-
-Not supported in V7, V8, V8.1. Use `--oref` instead in V7/V8/V8.1.
-
-```
---cref https://image.url --cw 100   # V6 / Niji 6
-```
-
-`--cw 0–100`. Default `100` = face + hair + clothing. `--cw 0` = face only (good for outfit/hair changes). Multiple URLs allowed: `--cref URL1 URL2`. Best with Midjourney-generated character images, not real photos.
-
----
-
-## --oref (Omni Reference) — V7 / V8.1
-
-Single image reference for subject identity (person, object, creature). Replaces `--cref` for V7+. **In early V8.1 Alpha `--oref` was temporarily unavailable; it is being restored ahead of the V8 editor / inpaint upgrades — verify availability per release.**
-
-```
---oref https://image.url --ow 100
-```
-
-### --ow (Omni Weight)
-
-Range `1–1000` (treat as `0–1000`; some clients accept `0`). Default `100`. One reference image per prompt only.
-
-```
---ow 25–50     # style transfer (e.g., photo → anime); over-specify subject in text
---ow 50–100    # loose resemblance
---ow 100–400   # default-band, recommended ceiling for normal use
---ow 400–1000  # only when fighting high --stylize / --exp; preserves logos, exact face, exact clothing
-```
-
-When `--stylize` or `--exp` is high, raise `--ow` proportionally or the reference will be overwhelmed. Don't exceed `--ow 400` unless competing with high stylization.
-
-### --oref Constraints
-
-- One image only
-- 2× GPU cost vs base V7 image
-- Not compatible with: `--q 4`, Vary Region, Pan, Zoom Out, Draft Mode, Conversational Mode, current Editor inpainting/outpainting (uses V6.1 underneath)
-- Multiple subjects: put two characters in a single reference image, name both in text prompt
-- For style-shift away from reference, lower `--ow` AND repeat physical features in the text
-
----
-
-## --p (Personalization / Profiles / Moodboards)
-
-Applies a Personalization profile or Moodboard. V7 profiles carry over to V8.1.
-
-```
---p                    # apply default profile(s)
---p pID                # specific Personalization profile by ID
---p mID                # specific Moodboard by ID
---p code               # specific snapshot code from a previous prompt
---p code1 code2        # blend multiple profile/moodboard codes
---profile <id>         # alternate alias for --p
-```
-
-Combine codes by listing them space-separated after `--p`. Moodboard codes do not support per-code weights; SREF codes do (`--sref code1::2 code2::1`).
-
-### Profile Stability Tiers
-
-```
-40 ratings      # minimum to start
-200 ratings     # stable, reliable
-2000+ ratings   # max refinement
-```
-
-Multiple named profiles allowed; multiple can be active simultaneously (blended). Rating method since Feb 26, 2026: scrolling-grid selection (replaces 1v1 pairs).
-
-`--sref` and `--p` can be combined in the same prompt for compound aesthetic control.
-
----
-
-## --no (Negative Prompt)
-
-```
---no item1, item2, item3
-```
-
-Single `--no` per prompt. Comma-separated. Equivalent to weighting each term `::-0.5`. Each term is parsed independently — `--no modern clothing` parses as `no modern` + `no clothing` (can trip moderation).
-
-**⚠ V8.1 INCOMPATIBLE (verified on public build):** `--no` returns the hard error `"--no is not compatible with --version 8.1"` and the job fails. This was reported as "limited in early V8.1 Alpha and being restored" in earlier docs, but on the current public V8.1 release `--no` is **rejected outright**. Do not use `--no` with `--v 8.1`. Verify per future build before assuming it has been re-enabled.
-
-### V8.1 Workarounds
-
-Since `--no` is unavailable on V8.1, fall back to one of:
-- **Multi-prompt negative weighting** (Discord only, V8.1 website strips it): `still life:: cartoon::-0.5`
-- **Stronger positive prompting**: describe what you DO want with concrete physical/lighting/camera detail. V8.1 responds better to positive specifics than to negation in any case.
-- **Switch to `--v 7`** for the single generation, which still supports `--no`, then bring the seed/composition forward.
-- **Generate, then Vary Region in the Editor** to repaint unwanted elements (Editor uses V6.1 underneath, which supports `--no`).
-
-### Effective Patterns (V7 / V6 / Niji — NOT V8.1)
-
-```
---no anime, cartoon, illustration, painting, drawing, sketch, 3D render   # photoreal lock
---no text, watermark, signature, frame, border                            # clean output
---no blur, depth of field                                                 # flat graphic / vector
---no smile, makeup                                                        # neutral portrait
---no oversaturated, HDR, artificial                                       # natural color
---no busy, cluttered, crowded                                             # minimal composition
---no motion blur, chromatic aberration, jpeg artifacts                    # specific artifacts only
-```
-
-### Anti-Patterns
-
-- Using `--no` at all with `--v 8.1` — the job will fail with a hard error.
-- `--no ugly, bad, deformed, low quality` — model has no stable concept of these; ineffective.
-- Negating qualities inherent to subject (`--no wet` on a rainy scene) — produces incoherence.
-- Long lists (>5 items) — diminishing returns.
-- First term in `--no` carries the strongest weight; put the most important exclusion first.
-
-If `--no` seems ignored on V7/V6/Niji, lower `--s` below 750 — high stylize overrides exclusions.
-
----
-
-## --tile
-
-Generates a single seamless-tileable image. Add `--tile`. No value. Use external pattern checker to preview the repeat.
-
-```
-seamless watercolor leaves --tile --ar 1:1
-```
-
-Upscaling tile images breaks the seam — do not upscale.
-
-**V8.1 known issue:** faint border on some sides of `--tile` outputs that breaks the repeat — fix in progress. For production patterns, generate at base resolution and tile externally.
-
----
-
-## --raw / --style raw
-
-Disables Midjourney's default aesthetic processing. Output adheres more literally to prompt. Compatible with V5.1+, including V8.1.
-
-```
---raw
---style raw
-```
-
-In V8.0, `--raw` was strongly recommended to defeat the over-polished default. In V8.1 the default returned to V7-spirit aesthetics; `--raw` is now optional and used for maximum prompt literality, photoreal accuracy, or to disable interpretive flourishes. Combine with `--s 0–100` for maximum photographic accuracy.
-
----
-
-## --niji 7 (Anime Model)
-
-```
---niji 7
-```
-
-Cleaner linework, sharper eyes/reflections, more literal prompts. Best `--sref` performance of any current model. **`--cref` not supported on Niji 7.** Personalization (`--p`) and Moodboards supported on Niji 7 (since Feb 26, 2026).
-
-`--niji 6` legacy supports style presets:
-
-```
---niji 6 --style expressive   # dynamic, stylized
---niji 6 --style cute         # kawaii
---niji 6 --style scenic       # background-focused
---niji 6 --style original     # classic Niji
-```
-
-V7/V8.1 do not support `--style expressive/cute/scenic`.
-
----
-
-## --draft (Draft Mode)
-
-10× faster, ½ GPU cost. Lower detail. For exploration only, not finals.
-
-```
---draft
-```
-
-Draft outputs can be Enhanced (improves base detail without changing composition) or upscaled to a final-quality version. SD V8.1 at full quality already runs as fast as V7 draft mode — `--draft` is most useful in V7.
-
----
-
-## Conversational Mode
-
-Activated via UI button (chat-bubble icon), not a `--flag`. LLM rewrites/extends your prompt or responds to natural-language follow-ups ("now make it winter"). Voice mode requires Draft Mode active. Conversational Mode is supported in V8.1. Refer to prior images in chat as `image 1`, `image 2`, etc.
-
----
-
-## Generation Speed Modes
-
-Mode selection is in settings, not a per-prompt parameter (except where noted).
-
-```
---fast    # override: single job in Fast Mode
---relax   # override: single job in Relax Mode
---turbo   # legacy turbo mode (V5/V5.1/V5.2 era)
-```
-
-V8.1 supports Fast, Turbo, and Relax (Standard/Pro/Mega plans). Combined `--hd` + `--q 4` is excluded from Relax. `--repeat`, permutations, and Omni Reference are not available in Relax.
-
----
-
-## --repeat / --r
-
-Runs the same prompt multiple times in one submission. Fast/Turbo only — not Relax. Each run consumes Fast GPU time. Stripped from the saved prompt.
-
-```
---r 4    # Basic: 2–4
---r 10   # Standard: 2–10
---r 40   # Pro / Mega: 2–40
-```
-
-Discord requires confirmation click before `--repeat` runs.
-
----
-
-## Permutation Prompts `{a, b, c}`
-
-Curly braces with comma-separated options expand into multiple jobs. Fast Mode only.
-
-```
-A {red, green, yellow} bird                              # 3 jobs
-A {red, green} bird in the {jungle, desert}              # 4 jobs (cartesian)
-A small house --stylize {100, 500, 1000}                 # 3 jobs varying parameter
-A landscape --ar {1:1, 16:9, 9:16}                       # 3 jobs varying ratio
-A cat --v {7, 8.1} --niji {7}                            # nest as needed
-```
-
-Job caps per submission: Basic 4, Standard 10, Pro/Mega 40 (Turbo: 40). Each permutation consumes Fast GPU time independently.
-
-Use `--sref random` inside a permutation prompt to get a different style code per permutation.
-
----
-
-## Multi-Prompt `::` Syntax + Weights
-
-`::` is a hard concept break. `space ship` = single concept; `space:: ship` = blended concepts.
-
-```
-space:: ship                  # equal blend
-space::2 ship                 # space twice as important as ship
-still life painting:: fruit::-0.5    # de-emphasize fruit
-```
-
-Rules:
-- No space before `::`; one space after
-- Decimal weights allowed in V4+, Niji 4+, V5+, V6+
-- Default weight is `1` if omitted
-- Sum of weights must be positive (`fruit::-2` alone fails; `painting:: fruit::-0.5` works)
-- `--no x` is equivalent to `x::-0.5`
-- Parameters still go at the very end, after multi-prompt fragments
-- Officially listed compatibility: V1–V6.1 / Niji 4–6.1; in V7/V8/V8.1 multi-prompts work in Discord but the website strips them — use Discord when needing weighted multi-prompts
-
----
-
-## Image Prompts (URLs at Front)
-
-```
-https://image.url subject description --ar 16:9 --v 8.1
-https://url1 https://url2 description --iw 1.5
-https://url1 https://url2                      # blend (no text = like /blend)
-```
-
-- URL must be public, ending in `.png .jpg .jpeg .gif .webp`
-- Image URLs go at the **start** of the prompt
-- Multiple URLs allowed; separated by spaces
-- Need either ≥2 image URLs or ≥1 image URL + text prompt — a single image URL with no text is invalid
-- Removed in V8.0 Alpha; **restored in V8.1**
-
-### --iw (Image Weight)
-
-Range `0–2` in V5/V6/V7/V8.1. Default `1`. (V3 historically supported wider range.) Decimal values valid (`--iw 0.25`, `--iw 1.5`).
-
-```
---iw 0–0.5     # prompt dominant
---iw 0.5–1     # balanced
---iw 1–1.5     # image dominant
---iw 1.5–2     # near-replica style transfer
-```
-
-In Discord V6 and earlier, individual image URLs can also be weighted: `URL1::2 URL2::1`.
-
----
-
-## Reference System Distinctions
-
-| System | Transfers | Use For | V8.1 Status |
-|---|---|---|---|
-| Image Prompt (URL + `--iw`) | composition, content, color | broad inspiration | Supported |
-| `--sref` | style, palette, lighting, mood | aesthetic match | Supported (`--sv 7` default) |
-| `--cref` | character identity (face/hair/clothes) | character consistency | V6 / Niji 6 only |
-| `--oref` | subject identity (person/object/creature) | subject consistency | V7 / V8.1 (verify alpha availability) |
-| Moodboard (`--p mID`) | aggregated personal aesthetic from rated set | persistent style across projects | Supported |
-| Personalization Profile (`--p pID`) | user taste from ratings | persistent personal bias | Supported |
-
-Combine: `--oref` (subject) + `--sref` (style) + `--p` (personal aesthetic) is valid. Adjust weights down (`--ow 100`, `--sw 100`) when stacking, otherwise references compete and one wins.
-
----
-
-## --exp (Experimental Aesthetics)
-
-Range `0–100`. Default `0`. Adds tone-mapping, HDR-like punch, surface detail.
-
-```
---exp 0       # off
---exp 5–10    # subtle, safe with other params
---exp 10–25   # recommended ceiling for combined use
---exp 25–50   # strong, may override --stylize
---exp 50–100  # dominant; overrides --p and high --s
-```
-
-`--exp 25+` overrules personalization and high stylize; raise `--ow`/`--sw` to maintain reference fidelity when stacking.
-
----
-
-## --motion (Video)
-
-Image-to-video. Generates 5-second clips, extendable to 21 seconds (4 extensions × 4s). Web-only. Costs ~8× regular image GPU. Standard, Pro, Mega plans can generate HD video (Fast Mode only). Pro/Mega only for Relax video (SD only).
-
-Video-only parameters (incompatible with most image params):
-
-```
---video                  # animate the prompt's source image
---motion low             # subtle, ambient (default)
---motion high            # dynamic camera + subject motion
---raw                    # reduce default video stylization
---loop                   # first frame = last frame
---end <image_url>        # define ending keyframe
---bs 1 | --bs 2 | --bs 4 # batch size (default 4)
-```
-
-URL goes at the start of the prompt, `--video` at the end:
-
-```
-https://image.url subject description --video --motion high --ar 16:9
-```
-
-Image-prompt parameters are stripped automatically when animating. Video moderation is independent — blocked jobs cost zero.
-
----
-
-## Editor Tools (V8.1 image → V6.1 editor)
-
-V8.1 images can be loaded into the Editor, but **Editor functionality (Pan, Zoom Out, Vary Region) currently runs on V6.1**. Editor results inherit V6.1 aesthetics. Native V8 Edit / inpaint / outpaint model is on the published roadmap.
-
-```
-Vary Region   # erase + regenerate selected area (inpainting)
-Pan           # extend canvas in one direction; uses V6.1
-Zoom Out      # 1.5× / 2× / Custom (1.0–2.0); uses V6.1
-Remix         # edit prompt while varying / panning / zooming
-```
-
-Custom Zoom: append a `--zoom 1.0–2.0` value via the Custom Zoom dialog.
-
-Omni Reference images must have `--oref` and `--ow` removed before submitting to Editor.
-
----
-
-## Describe (Image → Text)
-
-Right-click any image → Describe, or drag image to prompt bar → drop on Describe. Returns 4 prompt variations describing the image. Updated in V8.1 to produce longer, more detailed prompts in V8 prompting style. Click one to load, or `Run all prompts` to generate from all four.
-
-For closer match to source, attach the source image as `--sref` alongside the Describe-generated prompt.
-
----
-
-## Prompt Shortener
-
-Auto-engages in V8.1 when prompt exceeds the length limit (~1300 characters). Long prompt indicator appears; the system condenses overruns rather than truncating. Output may show increased variability when the shortener fires. To retain control, keep prompts inside the limit manually.
-
----
-
-## Prompt Structure
-
-V7+/V8.1 reads natural language. Keyword-soup ("8k, masterpiece, beautiful, stunning, ultra-detailed") degrades V8.1 results — strip it.
-
-### Recommended Order (front-loaded)
-
-```
-[SUBJECT + identifying details]
-[ACTION / POSE]
-[ENVIRONMENT / SETTING]
-[LIGHTING]
-[COMPOSITION / FRAMING / CAMERA]
-[STYLE / MEDIUM / ARTIST OR DIRECTOR REFERENCE]
-[MOOD / ATMOSPHERE]
-[--parameters]
-```
-
-Words at the front have stronger influence than words at the end. The first concept anchors the generation.
-
-### Length Targets
-
-```
-10–30 tokens    open interpretation; abstract, experimental
-30–80 tokens    balanced; most prompts
-80–150 tokens   detailed control; specific scenes
-150+ tokens     diminishing returns; conflicting signals; auto-shortener may fire
-```
-
-### What V8.1 Reads Well
-
-- Full sentences with concrete nouns and verbs
-- Specific lighting language (see Lighting block)
-- Specific lens / camera body terms
-- Single-source artist / director / photographer references
-- Quoted text for in-image typography: `sign reading "OPEN"`
-- Material descriptors: `oxidized copper with verdigris`, `brushed aluminum`, `worn leather`
-
-### What V8.1 Reads Poorly
-
-- Generic intensifiers (`amazing`, `incredible`, `masterpiece`)
-- Quality-claim spam (`8k`, `ultra-detailed`, `award-winning`)
-- Contradictions (`dark, bright, moody, cheerful`)
-- Long blocks of in-image text (multi-word body copy)
-- Specific named real people (use physical description instead)
-- Surreal / non-representational requests (V8 tends to "fix" these toward legibility)
-- Specific freckles, exact tattoos, exact logos on character refs
-
----
-
-## Camera & Lens Vocabulary (Effective in V8.1)
-
-```
-Camera bodies:
-  ARRI ALEXA, ARRI ALEXA Mini, ARRI ALEXA 65
-  RED Komodo, RED V-Raptor, RED Helium 8K
-  Sony Venice, Sony A7R IV
-  Hasselblad H6D, Hasselblad X2D
-  Phase One IQ4
-  Leica M11, Leica SL3
-  Canon EOS R5, Nikon Z8
-
-Lenses / focal lengths:
-  24mm f/1.4   wide environmental
-  35mm f/2.0   documentary, street
-  50mm f/1.4   neutral, classic
-  85mm f/1.8   portrait, shallow DOF
-  105mm f/2.0  compressed close-up
-  135mm f/2.0  tight portrait
-  Anamorphic   2.39:1 horizontal flares
-  Macro        1:1, extreme close-up
-  Tilt-shift   miniature effect
-
-Film stocks / palettes:
-  Kodak Portra 400, Kodak Ektar, Kodak Vision3
-  Fuji Velvia, Fuji Pro 400H
-  CineStill 800T
-
-Shot types:
-  extreme wide / wide / medium-wide / medium / medium close-up / close-up / extreme close-up
-  low angle / high angle / eye level / Dutch angle / overhead / dolly / tracking / aerial / drone
+## Key Findings
+
+```yaml
+model_id: midjourney_v8_1
+status: stable_production
+release_date_alpha: 2026-04-14            # alpha.midjourney.com
+release_date_stable: 2026-04-30           # midjourney.com + Discord
+predecessor: v8_0_alpha (2026-03-17)      # being decommissioned
+ranking_data_url: midjourney.com/rank-v8-1
+next_version_in_training: v8_2
+default_model_on_main_site: V7 was default until V8.1 stable; V8.1 is now the recommended version, but V7 remains the documented "default" in some surfaces during transition
+access_surfaces: [midjourney.com (web), Discord, alpha.midjourney.com]
+parameter_flag: "--v 8.1"  # also selectable in Settings → Version
+hard_prereq: "Global V7/V8 Personalization Profile must be unlocked"
+native_resolution_hd: 2048x2048           # --hd default
+native_resolution_sd: 1024x1024           # --sd toggle
+gpu_cost_sd: "<1.0 GPU-minute / 4-image job"
+gpu_cost_hd: "~1.33 GPU-minutes / 4-image job"
+speed_vs_v7: "~4-5x faster on standard jobs; SD-quality V8.1 ≈ V7 draft mode speed"
+seed_reproducibility: "~99% identical given same prompt+seed"
+aesthetic_direction: "Consistent and familiar aesthetic in the spirit of V7"
+default_sref_version: --sv 7   # introduced March 21, 2026, default in V8 series
 ```
 
 ---
 
-## Lighting Vocabulary (Effective in V8.1)
+## `<SYNTAX>` — Canonical Prompt Grammar
 
 ```
-Hard / Soft:
-  hard directional sunlight, hard key light, no fill
-  soft diffused light, softbox, overcast daylight
-
-Patterns:
-  Rembrandt, butterfly / paramount, split, loop, broad, short, rim, edge
-
-Time / source:
-  golden hour, blue hour, civil twilight
-  noon overhead, harsh midday
-  moonlight, starlight, bioluminescent glow
-  candlelight, firelight, sodium vapor street light, neon, fluorescent
-  tungsten warm 3200K, daylight 5600K
-
-Effects:
-  volumetric light, god rays, light shafts through fog
-  long shadows, hard shadows, no shadows
-  practical lighting, motivated lighting
-  chiaroscuro, low key, high key
-  three-point lighting (key, fill, rim)
-  catchlight in eyes
-  bounced fill from camera left
+/imagine [IMAGE_URLS...] [TEXT_PROMPT] [--PARAMETERS...]
 ```
 
-Specificity beats adjectives: `single overhead key light, no fill, hard shadows` beats `dramatic lighting`.
+**Order rules (enforced):**
+1. Image-prompt URL(s) (if any) come FIRST, space-separated, BEFORE any text.
+2. Text prompt comes next. Use natural-language sentences, NOT keyword stacks.
+3. ALL `--parameters` come LAST, after the text. Order among parameters does not matter.
+4. Parameter names are lowercase, prefixed by two ASCII hyphens `--`.
+5. Parameter values are separated from the name by ONE space (e.g. `--ar 16:9`, NOT `--ar=16:9`).
+6. Aspect-ratio values must be integers separated by `:` — decimals are rejected (use `139:100`, not `1.39:1`).
+7. Quoted literal text inside the prompt uses straight double quotes `"OPEN"` to instruct in-image typography.
 
----
-
-## Color Vocabulary
-
+**Minimal valid prompt:**
 ```
-Palettes:
-  monochromatic, complementary, analogous, triadic, split-complementary
-  pastel, muted, desaturated, vibrant, saturated, neon
-  warm-cool contrast, teal-and-orange
-  black and white, sepia, duotone
+elderly fisherman on weathered dock at dawn --v 8.1 --ar 3:2
+```
 
-Specifics:
-  burnt sienna, prussian blue, payne's grey, cadmium red
-  verdigris, ochre, vermilion
-  cyan-magenta cyberpunk, purple-orange synthwave, amber-blue Spielberg
+**Maximal pro prompt skeleton:**
+```
+<IMG_URL_1> <IMG_URL_2> [SUBJECT][SUBJECT DETAILS], [CONTEXT/ENV], [STYLE/MOOD], [CAMERA/LENS/LIGHTING], "[QUOTED_TEXT_IF_ANY]" --v 8.1 --ar 16:9 --s 250 --c 15 --w 0 --iw 1.25 --sref <URL_OR_CODE> --sw 120 --p <profileID> --hd --no <excluded_items> --seed 12345
 ```
 
 ---
 
-## Style / Movement / Artist References
+## `<PARAMS>` — V8.1 Parameter Table (Authoritative)
 
-V8.1 recognizes art movements, named photographers, named directors, and many fine artists. Single named reference > stacked names.
+| Parameter | Alias | Range / Values | Default | V8.1 Support | Notes |
+|---|---|---|---|---|---|
+| `--v` | `--version` | `8.1`, `8`, `7`, `6.1`, `6`, `5.2`, `5.1`, `5`, `4`, `3`, `2`, `1` | site-dependent | ✅ Use `--v 8.1` | Setting also available in Version section of Settings panel. |
+| `--niji` | — | `7`, `6`, `5`, `4` | n/a | ❌ Mutually exclusive with `--v` | Use `--niji 7` for anime/manga; do NOT combine with `--v`. |
+| `--ar` | `--aspect` | `W:H` integers; common: `1:1`, `2:3`, `3:2`, `4:5`, `5:4`, `6:11`, `9:16`, `16:9`, `21:9` | `1:1` | ✅ Full | No decimals. Extremely wide/tall ratios are experimental. Aspect change mid-iteration usually invalidates composition — lock early. |
+| `--stylize` | `--s` | `0`–`1000` integer | `100` | ✅ Full | V8.1 sweet spot: `100`–`400`. Above ~500 returns less radical change than in V7 (V8-family stylize range is compressed). Combine `--s 25–75` with `--style raw` for max photoreal. |
+| `--chaos` | `--c` | `0`–`100` integer | `0` | ✅ Full | Also exposed as "Variety" slider in web UI. Use `50–75` for exploration, `0–25` for finals. |
+| `--weird` | `--w` | `0`–`3000` integer | `0` | ✅ Full | Not fully compatible with `--seed`. Not compatible with moodboard jobs (auto-stripped). |
+| `--quality` | `--q` | `1`, `2`, `4` (V7); `1`, `2`, `4` historically valid in V8.0 (`--q 4` = extra coherence at 4× cost) | `1` | ⚠️ Use sparingly | In V8.1 the `--hd` default supersedes most reasons to use `--q 4`. `--q 4` + `--hd` combined was the only Relax-incompatible combo in V8.0. |
+| `--hd` | — | flag | **ON by default in V8.1** | ✅ V8.1-specific | Native 2K (2048-px). 3× faster + 3× cheaper than V8.0 HD. Cost ~1.33 GPU-min per 4-image job. |
+| `--sd` | — | flag | off (HD default) | ✅ V8.1-specific | Forces Standard Definition (1024-px). 50% faster + 25% cheaper than V8.0 SD. SD-quality jobs match V7 draft-mode speed. Set as default during May 2026 server transition. |
+| `--raw` / `--style raw` | — | flag | off | ✅ Full | Removes default Midjourney "house" styling. Recommended for product, editorial, documentary, and any literal-rendering job. Less needed in V8.1 than in V8.0 because default aesthetic is already calmer. |
+| `--seed` | — | integer `0`–`4294967295` | random | ✅ Full | V8.1 seeds are ~99% reproducible (a major V8-series improvement). Use for A/B prompt iteration. |
+| `--stop` | — | `10`–`100` | `100` | ✅ Full | Stops generation early to get less-finished/sketchier outputs. |
+| `--tile` | — | flag | off | ⚠️ Known issue | Generates seamless repeating texture. V8.1 has a documented faint-border edge bug; Midjourney is working on a fix. Use V6.1/V7 if production-critical until patched. |
+| `--no` | — | comma-separated tokens (e.g. `--no text, frame, watermark`) | none | ✅ Full | Equivalent to `::-0.5` multi-prompt weight. Each comma-separated token is read independently. Avoid two-word negatives like `--no modern clothing` (parsed as `no modern` + `no clothing`, can trigger moderation). |
+| `--iw` (image weight) | — | `0`–`2` (default `1`); some V-versions extend to `0`–`3` | `1` | ✅ Restored in V8.1 | Image prompts and image weights are back in V8.1 after being broken in V8.0. Increment by 0.25 when tuning. |
+| `--sref` | — | image URL(s) OR numeric style code(s) OR `random` | none | ✅ Full + super-stable in V8.1 | Multi-image: separate URLs with spaces. Codes work via `--sv 4` (pre-Jun 2025 V7 model), `--sv 6` (V6.1 codes), `--sv 7` (V8-series default, 4× faster/cheaper). Sref random is allowed only with `--sv 4` and `--sv 6`. |
+| `--sw` (style weight) | — | `0`–`1000` | `100` | ✅ Full | V8.1 sweet spot 50–150 for subtle, 150–300 for strong, 300+ for dominant. |
+| `--sv` (style-reference version) | — | `4`, `6`, `7` | `7` in V8 series | ✅ Full | `--sv 7` is the new default introduced March 21, 2026 — 4× faster/cheaper and compatible with `--hd`, `--p`, `--stylize`, `--exp`. |
+| `--p` | `--profile` | flag (use defaults) OR profile/moodboard ID | off unless toggled | ✅ Full + required to access V8.1 | `--p` alone applies the user's default profile(s). `--p <pID>` applies a specific ranked profile. `--p <mID>` applies a specific moodboard. Stack: `--p code1 code2`. **HARD REQUIREMENT: a Global V7/V8 Personalization Profile must be unlocked or V8.1 refuses to render.** Stylize controls intensity (0=off, 1000=max). |
+| `--oref` (Omni Reference) | — | image URL | n/a | ❌ NOT YET IN V8.1 | Confirmed not yet available in V8.1; planned to return before the V8 editor model. Use V7 if you need it now. Editor/gallery jobs that contain `--oref` cannot be re-opened in the V8.1 Editor — strip `--oref` and `--ow` first. |
+| `--ow` (Omni weight) | — | `0`–`1000` (default `100`) | `100` | ❌ Tied to `--oref` — unavailable in V8.1 | Auto-stripped by the web UI when `--oref` is absent. |
+| `--cref` (Character Reference) | — | image URL(s) | n/a | ❌ Not in V8.1 | V6/V6.1/Niji 6 only. V7 replaced it with `--oref`. V8.1 currently has neither — character consistency workflows should stay on V7 (or future V8 character system, hinted by the Niji team). |
+| `--cw` (Character weight) | — | `0`–`100` | `100` | ❌ Tied to `--cref` | Auto-stripped by web UI when `--cref` absent. |
+| `--exp` (experimental aesthetics) | — | `0`–`100` | `0` | ✅ Full | V8.1 sweet spot `5`–`25`. At ≥50 overrides `--stylize` and `--p`. Compatible with `--sv 7`. |
+| `--repeat` | `--r` | integer (plan-dependent) | n/a | ✅ Full | Runs the prompt N times; consumes GPU per run. |
+| `--draft` | — | flag | off | ⚠️ V7 feature | Per official docs, Draft Mode is V7-compatible. In V8.1, SD-quality is already at V7-draft speed, so the workflow equivalent is `--sd` instead of `--draft`. Conversational Mode IS supported in V8.1. |
+| `--motion` (video) | — | `low`, `high` | `low` | ✅ via Animate, but V8.1 still uses V1 Video Model | Animate any V8.1 image via web. HD video available on Standard/Pro/Mega (Fast only); Relax video on Pro/Mega only. |
+| `--bs` (video batch size) | — | `1`, `2`, `4` | `4` | ✅ | Lowers default 4-clip output for cost savings. |
+| `--profile` | (alias of `--p`) | profile/moodboard ID | n/a | ✅ Full | Identical to `--p code`; both forms accepted. Stack with `--sref` codes for blended aesthetics. |
+
+### Multi-Prompt Weighting `::`
 
 ```
-Photographers:    Annie Leibovitz, Helmut Newton, Saul Leiter, Vivian Maier, Sebastião Salgado, Gregory Crewdson
-Directors:        Roger Deakins, Ridley Scott, Denis Villeneuve, David Fincher, Alfonso Cuarón, Wes Anderson, Christopher Nolan, Terrence Malick
-Painters:         Van Gogh, Vermeer, Caravaggio, Mucha, Rembrandt, Beksinski, Hokusai
-Illustrators:     Craig Mullins, Greg Rutkowski, Moebius, Syd Mead, Ralph McQuarrie
-Movements:        Art Deco, Art Nouveau, Bauhaus, Brutalism, Vienna Secession, Ukiyo-e, Bauhaus, Memphis design, Abstract Expressionism
+SEGMENT_A ::W1 SEGMENT_B ::W2 SEGMENT_C ::W3
 ```
-
-Avoid named real-person likenesses (actors, public figures) for subjects — produces uncanny-valley results and may be moderation-blocked. Describe the person physically instead.
+- `::` is a hard divider; Midjourney processes each segment as an independent concept then composites.
+- Weight `W` is appended directly after `::` with no space. Default `W=1`. Decimals OK in V4+ family. Negative weights allowed (equivalent to `--no`) **only if the sum of all weights remains positive**.
+- **Caveat for V8.1:** Midjourney's own docs list multi-prompt compatibility as "versions 1, 2, 3, 4, Niji 4, 5, Niji 5, 6, Niji 6, 6.1." Multi-prompt `::` behavior in V7 and V8.x is undocumented and unreliable — prefer natural-language emphasis and `--no` in V8.1. Treat `::` as a legacy fallback, not a primary technique.
 
 ---
 
-## Text Rendering
+## `<RESOLUTION_AND_COST>` — Decision Logic
 
-V8.1 handles short in-image text well when wrapped in straight quotes:
-
+```yaml
+default_mode: HD
+HD:
+  resolution: 2048x2048 (1:1) or equivalent in other aspect ratios
+  cost: ~1.33 GPU-min per 4-image job
+  speed_vs_v8_0_HD: 3x faster, 3x cheaper
+  use_when: ["final delivery", "print", "client deliverable", "needs >1k detail"]
+SD:
+  resolution: ~1024x1024 (1:1)
+  cost: <1.0 GPU-min per 4-image job
+  speed: equivalent to V7 draft mode at full quality
+  use_when: ["exploration", "iteration", "concept hunting", "many variations"]
+run_as_HD_button:
+  behavior: reruns SD job at HD using same seed (NOT a true upscaler — minor variations expected)
+  warning: "Do NOT use Run-as-HD to preserve a specific SD image. Run HD from the start if a specific composition matters."
+upscaler_for_v8_1: NOT YET RELEASED  # roadmap: V8 upscalers next, then V8 edit/inpaint/outpaint
+editor_for_v8_1_images:
+  status: works, but Editor/Pan/Zoom/Vary-Region still use V6.1 model under the hood
 ```
-neon sign reading "OPEN"
-storefront with "BAKERY" in serif gold lettering
-poster with "JAZZ NIGHT" in art deco type
-```
-
-Lower `--s` to `0–25` for maximum text legibility. Single words and 2–4 word phrases work; long sentences and stylized fonts remain unreliable. For precise typography, generate without text and overlay in post.
 
 ---
 
-## V8.1 Known Limitations / Quirks
+## `<MODE_MATRIX>` — Speed Modes × Subscription
 
-- Hands and complex body positions still imperfect; better than V8.0 but not solved.
-- Small distant faces clearer in HD mode; use `--hd` for crowd / wide-shot legibility.
-- Occasional residual blur or pixelation in some outputs (acknowledged, fix in progress).
-- `--tile` outputs may show a faint border on some edges that breaks seamless repetition.
-- `--no` parameter is **rejected** on V8.1 (`"--no is not compatible with --version 8.1"`); was reported "limited in early V8.1 Alpha and being restored" but remains incompatible on the current public release. `--oref` is supported but routes through V6.1 for Editor operations.
-- `--oref` and Editor still route through V6.1 underneath until the V8 edit / inpaint / outpaint models ship.
-- Limited abstraction — V8 tends to "fix" surreal prompts into something more legible. For surreal work consider V7 or Niji 7.
-- Age drift carryover from V8.0 — subjects sometimes render older than specified; restate age explicitly in the subject phrase.
-- `--weird` not fully reproducible with `--seed`.
-- `--q 4` incompatible with `--oref`.
-- Multi-prompt `::` weights may be stripped on the website Imagine bar; use Discord for reliable weighted multi-prompts in V7/V8.1.
-- Personalization Global Profile must be unlocked (rate ≥40 images) before V8.1 will generate.
-- V8.1 does not yet have its own native upscaler — `Run as HD` is a re-render, not an upscale.
+| Mode | Basic | Standard | Pro | Mega | V8.1 Compatible |
+|---|---|---|---|---|---|
+| Fast | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Relax | ❌ | ✅ | ✅ | ✅ | ✅ (added Mar 21 2026; all commands except `--hd` + `--q 4` combined) |
+| Turbo | ✅ | ✅ | ✅ | ✅ | Available where surfaced |
+| Stealth | — | — | ✅ | ✅ | — |
 
 ---
 
-## Compatibility Matrix
+## `<REFERENCE_SYSTEMS>` — Style / Personalization / Image
 
-| Parameter | V8.1 | V7 | Niji 7 | Niji 6 |
+### Style Reference (`--sref`)
+- Two value types: image URL(s) OR numeric style code(s) (from Midjourney's internal library).
+- Multiple values: space-separated (`--sref URL1 URL2` or `--sref 123456 789012`).
+- Style versions selectable via `--sv 4|6|7`. V8.1 default is `--sv 7`.
+- `--sref random` requires `--sv 4` or `--sv 6` (V8.1 default `--sv 7` is incompatible with `random`).
+- Weight via `--sw 0–1000`. Default `100`.
+- V8.1 makes srefs "super stable" — the V8.0 sref drift bug is fixed.
+- Cannot create a custom numeric code from an uploaded image (use moodboards instead for that).
+
+### Moodboards / Personalization (`--p` / `--profile`)
+- HARD REQUIREMENT: Global V7/V8 Personalization Profile must be unlocked (rate images at `midjourney.com/personalize` until the progress bar fills).
+- V7 personalization profiles are fully backwards-compatible with V8.1.
+- `--p` → applies user's default profile(s).
+- `--p <ID>` or `--profile <ID>` → applies a specific Ranked Profile, Moodboard, or Standard Profile.
+- Stack multiple: `--p code1 code2 code3` (space-separated). Active profile selection now allows multiple simultaneously.
+- Stylization profiles increase in stability at 40 / 200 / 2000 ratings (minimum / stable / max).
+- Moodboards can be blended with `--sref` codes/URLs in a single prompt (e.g. `--sref 142710498 --profile drgmjoi 2jrqbw6`).
+- `--stylize` controls personalization intensity: 0 disables, 1000 maximizes. Default 100.
+- Moodboards are NOT compatible with `--sv`, `--sw`, or `--weird` (web UI auto-strips the weird parameter from moodboard jobs).
+
+### Image Prompts (`--iw`)
+- Restored in V8.1 (was unavailable in V8.0).
+- Drag-and-drop or paste image URL(s) BEFORE the text portion.
+- Multi-image without text → behaves like Discord `/blend`.
+- Per-image weight via multi-prompt `::` (e.g. `URL1::2 URL2::1`) plus overall `--iw`.
+- File extensions: `.png`, `.gif`, `.webp`, `.jpg`, `.jpeg`.
+- Best practice: crop reference to match `--ar` of target output.
+- Prompts with images-only (no text) are INCOMPATIBLE with `--stylize` and `--weird`.
+
+### Omni / Character / Object Reference
+- **Not yet supported in V8.1.** Stay on V7 with `--oref` if subject-consistency across images is required.
+
+---
+
+## `<TEMPLATES>` — Production-Ready Prompt Skeletons
+
+### T1. Cinematic photoreal (recommended V8.1 default)
+```
+[Shot type] [framing] of [subject phys. description], [action/pose], [costume], [setting/time-of-day], shot on [camera body] with [lens, aperture], [lighting style], [mood/atmosphere]
+--v 8.1 --ar 16:9 --s 150 --style raw --p --no anime, illustration, painting, cartoon, drawing
+```
+
+### T2. Editorial portrait
+```
+[Subject phys. description, age, ethnicity, hair, eyes], [expression], [pose], [lighting pattern: Rembrandt | butterfly | split | rim | loop] lighting, shallow depth of field, [background], shot on [medium-format camera] with [85–110mm lens]
+--v 8.1 --ar 4:5 --s 100 --style raw
+```
+
+### T3. Product / commercial (literal)
+```
+[Product] on [surface], [background style], [lighting setup], commercial product photography, sharp detail, [brand aesthetic adjective]
+--v 8.1 --ar 1:1 --s 50 --style raw --no people, hands, text, watermark
+```
+
+### T4. Concept art / fantasy
+```
+[Character/scene], [worldbuilding details], [magical/SF element], [lighting], [medium: concept art | painterly illustration | matte painting], influenced by [Artist A] and [Artist B]
+--v 8.1 --ar 21:9 --s 500 --w 150 --c 25
+```
+
+### T5. Anime / manga (route through Niji 7, not V8.1)
+```
+[Character description], [pose/action], [expression], [setting], [color palette]
+--niji 7 --ar 3:4 --sref <URL_or_code> --sw 150
+```
+
+### T6. Typography / signage (V8.1 strength)
+```
+[Scene with sign/poster], the words "QUOTED TEXT" in [typography style], [material/medium], [lighting]
+--v 8.1 --ar 16:9 --s 100 --style raw
+# Keep quoted text ≤ 4 words for best legibility.
+```
+
+### T7. Image-prompted variation
+```
+<IMG_URL> [optional text describing the desired transformation]
+--v 8.1 --iw 1.25 --ar 4:5 --s 150
+# --iw < 1 favors text; --iw > 1 favors source image.
+```
+
+### T8. Style transfer from sref code(s)
+```
+[Scene description, neutral, no style words]
+--v 8.1 --sref <code1> <code2> --sw 150 --ar 3:2 --s 100
+# Avoid style words in the text — let --sref carry the look.
+```
+
+### T9. Moodboard-driven brand image
+```
+[Subject and scene], [practical lighting/context]
+--v 8.1 --profile <moodboardID> --ar 4:5 --s 200
+# Pair with --sref for hybrid control.
+```
+
+### T10. Tileable texture
+```
+seamless [material] texture, [surface qualities], top-down macro detail
+--v 8.1 --tile --ar 1:1 --s 100 --style raw
+# Known V8.1 edge-border bug — verify in a pattern checker before production use.
+```
+
+### T11. Negative-prompt-heavy refinement (e.g., stripping AI artifacts)
+```
+[Subject], [scene], [lighting]
+--v 8.1 --ar 3:2 --s 100 --style raw --no text, font, letters, watermark, signature, frame, border, blur, oversaturation, HDR, anime, cartoon, illustration, 3d render
+```
+
+### T12. Multi-prompt weighted composite (LEGACY — use sparingly in V8.1)
+```
+[concept_A] ::2 [concept_B] ::1 [unwanted_concept] ::-0.5
+--v 8.1 --ar 16:9
+# Multi-prompt :: is officially documented only through 6.1; behavior in V8.1 is inconsistent. Prefer natural language + --no.
+```
+
+---
+
+## `<RULES>` — Hard Constraints for V8.1 Prompt Generation
+
+```xml
+<rules>
+  <r1>ALWAYS include `--v 8.1` (or rely on user's default model setting) unless the task is anime/manga (use `--niji 7`).</r1>
+  <r2>NEVER mix `--v` and `--niji` in the same prompt.</r2>
+  <r3>NEVER include `--oref`, `--ow`, `--cref`, or `--cw` in a V8.1 prompt — they are not supported. If subject consistency is required, switch to `--v 7` + `--oref`.</r3>
+  <r4>NEVER use `--draft` in V8.1 prompts. Use `--sd` for fast exploration instead.</r4>
+  <r5>NEVER include decimals in `--ar`. Convert (e.g., 1.85:1 → 37:20).</r5>
+  <r6>NEVER name living actors, named celebrities, or trademarked characters as the subject. Describe people physically (age, ethnicity, build, hair, eyes, expression, costume).</r6>
+  <r7>NEVER stack quality keywords ("8k, ultradetailed, masterpiece, beautiful, stunning"). V7+ ignores or actively degrades on keyword spam. Write full clauses describing what is in the frame.</r7>
+  <r8>ALWAYS use STRAIGHT double quotes `"..."` to mark in-image text. Keep quoted text ≤ 4 tokens for high success rate.</r8>
+  <r9>ALWAYS lock aspect ratio early — V8.1 composes differently per ratio; switching mid-iteration usually invalidates the seed.</r9>
+  <r10>Two-word `--no` phrases parse as independent tokens. Avoid `--no modern clothing` (use `--no clothing` and add "vintage attire" to the positive prompt instead).</r10>
+  <r11>If using ONLY image prompts (no text), do NOT add `--stylize` or `--weird` — they are silently incompatible.</r11>
+  <r12>When using a moodboard (`--p <mID>` or `--profile <mID>`), do NOT add `--sv`, `--sw`, or `--weird` — auto-stripped or unsupported.</r12>
+  <r13>If `--exp ≥ 50`, do NOT also rely on `--stylize` or `--p` for look control — they will be overridden.</r13>
+  <r14>For maximum photorealism: `--s 25–100` + `--style raw` + specific camera/lens/lighting clauses.</r14>
+  <r15>For maximum stylization: `--s 300–700` + named artistic-medium clause + optional `--sref`.</r15>
+  <r16>Seed for reproducibility: a single integer; V8.1 reproduces to ~99% identity. Use the same seed when A/B testing prompt-token deltas.</r16>
+  <r17>Run-as-HD is NOT an upscaler — it reruns from seed at HD. To guarantee a specific composition in HD, render in HD from the start.</r17>
+  <r18>V8.1 rewards LONGER, MORE SPECIFIC prompts than V7 did. Aim for 40–120 tokens of meaningful scene direction. Prompts beyond the length cap auto-trigger Prompt Shortener, which may introduce variability — for maximum control, keep within limit yourself.</r18>
+  <r19>The user MUST have a Global V7/V8 Personalization Profile unlocked, or V8.1 returns an error. If generating prompts for first-time users, advise them to complete profile setup first.</r19>
+  <r20>HD is the default — only add `--sd` when explicitly wanting standard resolution. Do not add `--hd` redundantly (it is the active default during normal operation; during temporary server-transition periods Midjourney may swap the default to SD, in which case `--hd` re-enables HD).</r20>
+</rules>
+```
+
+---
+
+## `<PROMPT_HIERARCHY>` — Token-Order Weighting (V8.1)
+
+V8.1 weights early tokens most heavily. Construct prompts in this order:
+
+1. **Subject** (concrete noun phrase): "elderly fisherman"
+2. **Subject details** (physical, costume, expression): "weathered face, silver beard, kind eyes, navy wool sweater"
+3. **Action / pose**: "mending nets, hands visible"
+4. **Context / environment / time-of-day**: "on a wooden dock at dawn, mist over the harbor"
+5. **Style / mood**: "documentary photography, contemplative"
+6. **Technical (camera / lens / lighting)**: "shot on Leica M11 with 50mm f/1.4, soft morning side-light"
+7. **In-image text (quoted)** if any: `"OPEN"`
+8. **Parameters**: `--v 8.1 --ar 3:2 --s 150 --style raw --p --no anime, illustration`
+
+---
+
+## `<FAILURE_MODES>` — Known V8.1 Weaknesses
+
+| Failure mode | Mitigation |
+|---|---|
+| Faint border edges on `--tile` outputs breaking the pattern repeat | Verify in a seamless-pattern checker; fall back to V6.1/V7 for production tiles until fixed. |
+| `--oref` / `--cref` not available — character consistency across images fails | Use V7 + `--oref` for character work; revert to V8.1 once V8 character ref ships. |
+| Editor / Pan / Zoom / Vary Region still rendering at V6.1 quality on V8.1 images | Plan final composition in the prompt; avoid heavy post-edits until V8 Editor ships. |
+| Occasional blurriness / pixelation in a minority of V8.1 outputs | Use feedback buttons in the lightbox; regenerate; or run as HD explicitly. |
+| Hands and bodies still occasionally distorted (improved vs V7 but not perfect) | Use `--no hands` or crop; or describe hand position precisely. |
+| Text rendering worse than V8.0 (Midjourney explicitly traded text quality for V7-aesthetic restoration) | Keep quoted text ≤ 4 words; do final typography in post; consider V8.0 if available specifically for text-heavy work. |
+| Long prompts auto-shortened invisibly, increasing variability | Keep prompts within the length limit (~limit not formally documented; community reports historical ~300 chars but V8.1 raises it). When the long-prompt icon appears, manually edit instead of relying on the Shortener. |
+| Multi-prompt `::` weighting unreliable in V8.1 | Prefer natural-language emphasis and `--no` rather than `::`. |
+| Personalization required to even use V8.1 | Always advise unlocking Global V7/V8 Profile first. |
+| Aspect-ratio composition not transferable | Set `--ar` BEFORE iterating; treat ratio change as a new experiment. |
+| Stylize ≥ 500 returns smaller delta than expected (V8-family stylize range compression) | Anchor stylize in 100–400 band; reach beyond by adding `--exp 10–25` rather than pushing `--stylize`. |
+
+---
+
+## `<BEST_PRACTICES_V8_1>` — Patterns That Work
+
+```yaml
+prompting_voice:
+  - Write full clauses and sentences, not keyword lists.
+  - "trend towards longer, more specific prompting" (Midjourney's own V8-series guidance).
+  - Be literal about medium: "35mm film photograph, Kodak Portra 400 palette, visible grain" beats "film look".
+  - Name lighting precisely: "single overhead key light, no fill, hard shadows" beats "dramatic lighting".
+  - Reference photographers/cinematographers/directors for style anchoring (e.g., "Roger Deakins cinematography", "Annie Leibovitz portraiture", "Hélène Binet architectural photography").
+
+token_economy:
+  - 30–80 tokens: balanced control (most general prompts).
+  - 80–150 tokens: detailed scene direction (V8.1 sweet spot for pro work).
+  - 150+ tokens: diminishing returns; Prompt Shortener may engage.
+
+stylize_recipes:
+  photorealistic: --s 25–100 --style raw
+  editorial: --s 100–250
+  illustrative: --s 300–500
+  abstract/experimental: --s 600–1000 + --w 500–2000
+
+exploration_to_production_loop:
+  1: "Explore with --sd (V8.1 SD ≈ V7 draft speed). High --chaos 50–75."
+  2: "Identify direction. Lock seed. Lower --chaos to 0–25."
+  3: "Refine prompt tokens. Same seed, small edits."
+  4: "Render final in HD (default). Or 'Run as HD' to upgrade the selected seed."
+
+sref_workflow:
+  - Use --sv 7 default for V8.1; --sv 6 if migrating legacy V6.1 codes.
+  - Multi-sref blending: --sref URL1 URL2 (averages styles).
+  - Combine moodboard + sref: --profile <mID> --sref <code> for project-consistent yet image-anchored output.
+
+negative_prompt_recipes:
+  remove_photo_realism_artifacts: --no anime, cartoon, illustration, painting, 3d render, CGI
+  clean_image: --no text, watermark, signature, frame, border, logo
+  natural_skin: --no makeup, filters, oversaturation, HDR
+  simple_composition: --no busy, cluttered, crowded
+  flat_graphic_look: --no blur, depth of field
+```
+
+---
+
+## `<DESCRIBE_AND_SHORTENER>` — V8.1 Helper Tools
+
+```yaml
+describe:
+  trigger: right-click image → "Describe", or drag image to top of prompt bar → Describe
+  output: 4 candidate prompts written in V8 prompting style (longer, more detailed than previous Describe)
+  use_for: reverse-engineering an admired image's prompt; modify before running
+  prompts_clear_on: page refresh
+
+prompt_shortener:
+  trigger: automatic when input exceeds prompt length limit
+  ui_signal: "long prompt" icon appears with note that prompts of this length will be adjusted (may increase variability)
+  behavior: input is shown in full but model receives a condensed version
+  best_practice: stay within length limit manually to retain full control; rely on Shortener only as a safety net
+
+conversational_mode:
+  status: supported in V8.1
+  use_for: natural-language prompt drafting; voice input optional
+  reference_images_by: "image 1", "image 2", etc. in conversation
+```
+
+---
+
+## `<COMPATIBILITY_MATRIX>` — V7 vs V8.0 vs V8.1 vs Niji 7
+
+| Capability | V7 | V8.0 Alpha | V8.1 | Niji 7 |
 |---|---|---|---|---|
-| `--ar` | ✅ | ✅ | ✅ | ✅ |
-| `--s 0–1000` | ✅ | ✅ | ✅ | ✅ |
-| `--c 0–100` | ✅ | ✅ | ✅ | ✅ |
-| `--w 0–3000` | ✅ | ✅ | ✅ | ✅ |
-| `--q 1/2/4` | ✅ | ✅ | ✅ | ✅ |
-| `--seed` | ✅ ~99% | ✅ | ✅ | ✅ |
-| `--raw` / `--style raw` | ✅ | ✅ | partial | partial |
-| `--sref` URL | ✅ (`--sv 7`) | ✅ (`--sv 6`) | ✅ best | ✅ |
-| `--sref` numeric code | ✅ (`--sv 4`/`6`) | ✅ | ✅ | ✅ |
-| `--sw 0–1000` | ✅ | ✅ | ✅ | ✅ |
-| `--cref` / `--cw` | ❌ | ❌ | ❌ | ✅ |
-| `--oref` / `--ow` | ✅* | ✅ | ❌ | ❌ |
-| `--p` / `--profile` | ✅ | ✅ | ✅ (Feb 2026+) | optional |
-| `--no` | ❌ rejected | ✅ | ✅ | ✅ |
-| `--iw 0–2` | ✅ | ✅ | ✅ | ✅ |
-| Image prompts | ✅ | ✅ | ✅ | ✅ |
-| `--tile` | ⚠ border bug | ✅ | ❌ | ❌ |
-| `--hd` / `--sd` | ✅ | ❌ | ❌ | ❌ |
-| `--exp 0–100` | ✅ | ✅ | ✅ | partial |
-| `--draft` | ✅ | ✅ | ✅ | ✅ |
-| `--repeat` / `--r` | ✅ Fast/Turbo only | ✅ | ✅ | ✅ |
-| Permutations `{a,b}` | ✅ Fast only | ✅ | ✅ | ✅ |
-| Multi-prompt `::` | Discord only | Discord only | ✅ | ✅ |
-| `--video` / `--motion` | image-to-video web | ✅ | ❌ | ❌ |
-| `--style expressive/cute/scenic` | ❌ | ❌ | ❌ | ✅ |
-| Conversational Mode | ✅ | ✅ | — | — |
-| Editor (Pan/Zoom/Vary) | ✅ but uses V6.1 underneath | ✅ V6.1 | — | ✅ |
-
-*\* `--oref` was limited in early V8.1 Alpha; supported on current build. `--no` is rejected on V8.1 with a hard error — use V7 or describe what you want positively.*
+| Default model on midjourney.com | Until Apr 30 2026 | (alpha-only) | After Apr 30 2026 | n/a |
+| Native 2K | No | `--hd` (4× cost) | **Default** | No |
+| Speed vs V7 baseline | 1× | ~5× | ~4–5× | ~ |
+| Text rendering with quotes | Good | Best | Slightly worse than V8.0 | Good |
+| `--oref` | ✅ | ✅ | ❌ (not yet) | ❌ |
+| `--cref` | ❌ | ❌ | ❌ | ❌ |
+| `--sref` stability | ✅ | unstable | ✅ super-stable | best |
+| Moodboards (`--p`) | ✅ | unstable | ✅ super-stable | ✅ (since Feb 26 2026) |
+| Image prompts + `--iw` | ✅ | ❌ broken | ✅ restored | ✅ |
+| Draft Mode `--draft` | ✅ | ❌ | ❌ (use `--sd`) | ❌ |
+| Editor / Pan / Zoom on its own outputs | V6.1 backend | V6.1 backend | V6.1 backend | n/a |
+| Upscalers | ✅ Subtle/Creative | ❌ | ❌ (roadmap) | ✅ |
+| Video (V1 model) | ✅ | ✅ | ✅ | ✅ |
+| Aesthetic default | reference | over-processed | "spirit of V7" | clean anime |
+| Stylize useful range | 0–1000 (full) | 100–400 compressed | 100–400 most useful | 0–1000 |
 
 ---
 
-## Cost / Mode Compatibility (V8.1)
+## Recommendations
 
-```
-Default                  ~1× (HD baseline; ~1.33 GPU min)
---sd                     <1× (~<1 GPU min)
---q 2                    2× compute
---q 4                    4× compute (incompatible with --oref)
---hd + --q 4             highest cost; excluded from Relax
---oref                   2× compute; not Relax/Draft/Conversational/--q 4
---sref / Moodboard       cheaper on --sv 7 (4× cheaper than --sv 6)
---sv 6 with sref         4× cost in V8 Alpha; verify on V8.1
---repeat                 N× per repeat; Fast/Turbo only
-Permutations             N× per permutation; Fast only
-Video                    ~8× image cost
-HD video                 ~3.2× SD video cost; Pro/Mega only
-```
+### When to Generate Prompts Targeting V8.1
+- **Default to V8.1** for photoreal product, editorial, cinematic, architectural, and typography work. It is the fastest, sharpest, and most economically priced V8-series model.
+- **Use V7 instead** when the workflow requires (a) `--oref` character consistency across images, (b) Draft Mode, (c) heavy use of the Editor (Pan/Zoom/Vary Region) where V6.1 backend artifacts would be visible, or (d) Vary Region inpainting.
+- **Use Niji 7 instead** for any anime/manga, illustrated character, or Eastern-aesthetic illustration work — and Niji 7's `--sref` is still the platform's strongest style-transfer engine.
 
----
+### Staged Prompt-Generation Workflow for LLMs
+1. **Classify intent** → photoreal / illustration / anime / typography / abstract.
+2. **Select model flag** → `--v 8.1` (default), `--v 7` (only for `--oref`/Editor work), or `--niji 7` (anime).
+3. **Pick template** (T1–T12 above) matching the intent.
+4. **Fill SUBJECT-first hierarchy** (see `<PROMPT_HIERARCHY>`).
+5. **Apply parameter recipe** from `<BEST_PRACTICES_V8_1>` (`--s`, `--style raw`, `--no`, etc.).
+6. **Add reference layer** if user supplied images/codes/moodboards: `--sref`, `--p`, image URL + `--iw`.
+7. **Audit against `<RULES>`** — strip forbidden parameters, fix `--ar` decimals, ensure subject is described physically not by celebrity name.
+8. **Validate** prompt length is within typical limits; if longer, warn the user that Prompt Shortener will engage.
 
-## Aspect Ratio Use Map
-
-```
-1:1     square          social profile, icons, tile bases, balanced product
-4:5     vertical-soft   Instagram feed portraits, mobile-friendly editorial
-5:4     near-landscape  desktop wallpaper, presentation slides
-2:3     vertical        photography prints, magazine covers, Pinterest
-3:2     classic-photo   landscape print, photojournalism
-16:9    widescreen      YouTube, video thumbnails, environmental establishing shots
-9:16    vertical video  Stories / Reels / TikTok / phone wallpaper
-21:9    cinematic-wide  film stills, anamorphic environments, panoramas
-6:11    tall portrait   phone wallpapers, vertical posters
-7:4     near-HD         smartphone, HD TV
-1.91:1  social-link     LinkedIn / Facebook share cards
-```
-
-Wide ratios force environmental composition; tall ratios force subject-centric framing. Choose ratio before generating — changing later via Pan/Zoom uses V6.1 and shifts aesthetic.
+### Benchmarks that should change these recommendations
+- **V8.2 release** (currently training; rating data being collected at `midjourney.com/rank-v8-1`): re-evaluate aesthetic defaults and any new parameters.
+- **V8 upscalers ship** (next on Midjourney's roadmap): drop the "Run-as-HD-is-not-an-upscaler" caveat; revise the Editor matrix.
+- **V8 edit / inpaint / outpaint model ships**: Editor and Vary Region recommendations should swap from V6.1-backend caveat to V8 native.
+- **`--oref` returns to V8.1**: drop the "use V7 for character consistency" branch.
+- **V8.0 decommission** (any week now): drop all V8.0 references from this guide.
+- **Multi-prompt `::` officially documented for V8.x**: re-promote `::` from legacy fallback to first-class technique.
 
 ---
 
-## Decision Heuristics
+## Caveats
 
-```
-Photoreal portrait:        --v 8.1 --ar 4:5 --s 50–150 --raw
-Photoreal product:         --v 8.1 --ar 1:1 --s 0–50 --raw --hd --q 2
-Cinematic environment:     --v 8.1 --ar 21:9 --s 150–300
-Concept art / illustration:--v 8.1 --ar 16:9 --s 400–700
-Surreal / experimental:    --v 7 --w 500–1500 --c 25–50 (V8 fixes surrealism)
-Anime / manga:             --niji 7 --ar 3:4 --s 100
-Character consistency:     --v 8.1 --oref URL --ow 100–300 (single subject)
-Style consistency:         --v 8.1 --sref URL --sw 100–200 OR --p mID
-Logo / vector:             --v 8.1 --raw --s 0–50 (or --v 7 --raw --s 0–50 --no blur, depth of field)
-Text-heavy poster:         --v 8.1 --raw --s 0–25 ("quoted text")
-Tile / pattern:             --v 8.1 --tile --ar 1:1 (verify border, do not upscale)
-Story / extended canvas:   generate base → Editor → Pan/Zoom Out (V6.1)
-Video:                     image-to-video → --motion low | high --raw
-Rapid ideation:            SD V8.1 (already as fast as V7 draft) OR V7 --draft
-```
-
----
-
-## Workflow Templates
-
-### Photoreal portrait
-```
-Close-up portrait of a [age] [identity] with [physical features], [expression], [pose], [environment], [lighting pattern] lighting, shot on [camera] with [lens], [mood] atmosphere
---ar 4:5 --s 100 --raw --v 8.1
-```
-(For `--no anime, cartoon, illustration` exclusions, use `--v 7` instead — `--no` is rejected on V8.1.)
-
-### Cinematic wide
-```
-Wide cinematic shot of [subject] in [environment], [time of day], [weather/atmosphere], in the style of [director] cinematography, captured on [camera] with [lens], [color palette]
---ar 21:9 --s 200 --v 8.1
-```
-
-### Product
-```
-[Product] on [surface], [background], [lighting setup], commercial photography, high detail, [brand aesthetic]
---ar 1:1 --s 25 --raw --hd --q 2 --v 8.1
-```
-(For `--no clutter, hands, text` exclusions, swap to `--v 7` — `--no` is rejected on V8.1.)
-
-### Anime character
-```
-[Character description with hair color, eye color, outfit details], [pose], [expression], [background], [color palette]
---niji 7 --ar 3:4
-```
-
-### Character consistency series
-```
-[Scene / action] --oref [URL of base character] --ow 100 --v 8.1 --ar 4:5
-[Different scene] --oref [same URL] --ow 100 --v 8.1 --ar 16:9
-```
-
-### Style-locked series
-```
-[Subject A] --sref [code] --sw 150 --v 8.1
-[Subject B] --sref [code] --sw 150 --v 8.1
-[Subject C] --sref [code] --sw 150 --v 8.1
-```
-
-### Subject + Style combined
-```
-[Description] --oref [subject URL] --ow 150 --sref [style URL] --sw 100 --v 8.1
-```
-
----
-
-## Anti-Patterns (Do Not Use)
-
-```
-beautiful, stunning, masterpiece, 8k, ultra-detailed, intricate, trending on artstation
-```
-
-These degrade V7/V8/V8.1 outputs. Replace with concrete physical / lighting / camera detail.
-
-```
---no ugly, bad, deformed, low quality
-```
-
-Ineffective — model has no stable concept of these. Use specific artifacts (`--no motion blur, jpeg compression`) instead.
-
-```
-single image URL with no text prompt
-```
-
-Invalid. Either add text or add a second image URL.
-
-```
---cref URL --v 8.1
---cref URL --niji 7
-```
-
-`--cref` is V6 / Niji 6 only. Use `--oref` for V7 / V8.1; for Niji 7 there is currently no character-reference equivalent.
-
-```
---oref URL --q 4
-```
-
-Incompatible — `--q 4` with `--oref` will fail or ignore one parameter.
-
-```
---sw 200 --p mID
-```
-
-`--sw` is not compatible with Moodboards. Apply weight via `--sref` codes instead, or use Personalization profile alone.
-
-```
-multi --no commands
-```
-
-Single `--no` per prompt with comma-separated terms. `--no x --no y` is invalid.
-
-```
---no anything --v 8.1
-```
-
-Rejected on V8.1 with `"--no is not compatible with --version 8.1"`. Drop the `--no` (use positive description instead) or switch to `--v 7`.
-
-```
-1.5:1
-```
-
-Decimals not allowed in `--ar`. Use `3:2` or `150:100`.
-
----
-
-## Quick Parameter Reference Card
-
-```
-MODEL
-  --v 8.1 / --v 8 / --v 7 / --niji 7 / --niji 6
-  --hd / --sd                       (V8.1 resolution toggle)
-  --raw / --style raw
-
-GEOMETRY
-  --ar W:H                          0 decimals; default 1:1
-  --tile                            seamless single tile
-
-AESTHETIC
-  --s 0–1000      default 100
-  --c 0–100       default 0
-  --w 0–3000      default 0; weak vs --seed
-  --exp 0–100     default 0
-  --q 1/2/4       default 1; no q3; q4 ≠ --oref
-
-REFERENCES
-  image URL (front of prompt)
-  --iw 0–2        default 1
-  --sref URL | code | random
-  --sw 0–1000     default 100; ≠ Moodboards
-  --sv 4 | 6 | 7  sref engine version
-  --oref URL      single image; V7/V8.1
-  --ow 0–1000     default 100
-  --cref URL      V6 / Niji 6 only
-  --cw 0–100      default 100
-  --p / --profile [pID|mID|code ...]
-
-CONTROL
-  --seed 0–4294967295
-  --no item1, item2, item3        (single --no per prompt; ❌ NOT V8.1 — V7/V6/Niji only)
-  --repeat / --r 2–40             Fast/Turbo only
-  {a,b,c} permutations            Fast only
-
-VIDEO
-  https://startURL ... --video --motion low|high --raw --loop --end <url> --bs 1|2|4
-
-WEIGHTS (Discord)
-  concept::N                      hard break + weight
-  URL::N                          per-image weight (image prompts / sref)
-```
-
----
-
-## Final Directives for Prompt Construction
-
-1. Write subject first. Front-load the most important concept.
-2. Use natural language sentences, not keyword lists.
-3. One named artist/director/photographer reference is enough; stacking dilutes.
-4. Pick `--ar` before composition, not after.
-5. Lower `--s` for literal output; raise for artistic interpretation.
-6. Quote in-image text. Lower `--s` for legibility.
-7. Use `--raw` when default V8.1 aesthetic is too polished.
-8. Stack references conservatively: `--ow 100` + `--sw 100` + `--p` simultaneously, then adjust.
-9. Use `--seed` for series consistency, `--c` for controlled variance, `--w` only for exploration.
-10. Do not use `--no` with `--v 8.1` — it is rejected with a hard error. For exclusions on V8.1, rely on positive prompting; if `--no` is essential, switch to `--v 7`.
-11. Generate with `--hd` from start when HD output matters — `Run as HD` is a re-render not an upscale.
-12. For surreal / abstract work, prefer `--v 7` over `--v 8.1`.
-13. For anime / manga, prefer `--niji 7` over `--v 8.1`.
-14. For character consistency on Niji 7, no native `--cref` / `--oref` — use detailed text + `--sref` of a base character image.
-15. Never use real-person names as subjects; describe physically instead.
+- **Midjourney releases are fast and undocumented.** Some behaviors (e.g., exact `--q` value support in V8.1, exact character cap that triggers Prompt Shortener, exact `--iw` upper bound) are not formally published in V8.1's release notes; values in this guide reflect the most authoritative public sources (Midjourney's `updates.midjourney.com` post, `docs.midjourney.com` Version article, and multiple May 2026 reviews). Treat numeric ranges marked "historically" or "community-reported" as approximate.
+- **The `docs.midjourney.com` Multi-Prompts page lists compatibility as "versions 1–6.1," omitting V7/V8.x.** It is unclear whether `::` is unsupported in V8.1 or merely undocumented. Empirical testing required for production reliance.
+- **Editor / Pan / Zoom Out / Vary Region currently use V6.1** even on V8.1-generated images. Quality and prompt fidelity inside those tools will not match V8.1 native render quality until the V8 edit/inpaint/outpaint model ships.
+- **`--draft` Draft Mode is documented as V7-compatible.** Reviewers report V8.1 SD-quality already matches V7 draft speed, so practical Draft-Mode workflows transfer to `--sd` in V8.1.
+- **A Global V7/V8 Personalization Profile is required to use V8.1.** New users must complete the personalization image-selection flow first; this is not optional.
+- **`--oref` and `--cref` are unavailable in V8.1.** This is a regression compared to V7; Midjourney has signaled `--oref` will return before the V8 edit model, but no firm date.
+- **V8.0 is being decommissioned a few weeks after V8.1 stable.** Workflows that relied on V8.0-specific behavior (notably its stronger text rendering) should test in V8.1 immediately.
+- **Speed and cost claims (1.33 GPU-min HD, <1 GPU-min SD, "3× faster/cheaper") are from Midjourney's own announcement** (`updates.midjourney.com/v8-1-alpha/` and `/v8-1-updates/`) and may be subject to revision during the documented "server transition" period in which SD was temporarily made default to conserve compute.
+- **During temporary server transitions**, Midjourney may force SD as default; verify HD is active in Settings or append `--hd` explicitly.
+- **The 50-style "Style Creator" feature** referenced in some third-party May 2026 articles is a UI / curated-styles tool, not a per-prompt parameter; do not fabricate a `--style <name>` flag beyond the documented `--style raw` (V7) / `raw` toggle.
+- **This guide reflects the state of Midjourney V8.1 as of approximately May 12, 2026.** Re-validate against `docs.midjourney.com/hc/en-us/articles/32199405667853-Version` and `updates.midjourney.com` before any production deployment.
