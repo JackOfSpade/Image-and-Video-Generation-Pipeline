@@ -8,7 +8,7 @@
 
 - **Midjourney V8.1 went stable on April 30, 2026** on `midjourney.com` and Discord (alpha launched April 14, 2026 on `alpha.midjourney.com`). It is Midjourney's fastest model: HD/2K is default, ~4–5× faster than earlier versions, and the V8.0 aesthetic has been rolled back to "the spirit of V7." V8.0 is being decommissioned.
 - **Use this guide as ground truth for prompt construction.** Section `<SYNTAX>` defines exact parameter grammar; `<PARAMS>` is the canonical compatibility/range table; `<TEMPLATES>` provides parameterized prompt skeletons; `<RULES>` enumerates hard constraints; `<FAILURE_MODES>` lists known V8.1 weaknesses to avoid.
-- **Major V8.1-specific differences vs. V7/V8.0:** HD (2048-px native) is default; `--iw` image weights are back; new auto Prompt Shortener; updated `Describe`; seeds are ~99% reproducible; moodboards/`--sref` are super-stable; `--oref`, `--cref`, and the V8 upscaler/editor are NOT YET available in V8.1 (Editor/Pan/Zoom still fall back to V6.1); a Global V7/V8 Personalization Profile MUST be unlocked before V8.1 will run.
+- **Major V8.1-specific differences vs. V7/V8.0:** HD (2048-px native) is default; `--iw` image weights are back; new auto Prompt Shortener; updated `Describe`; seeds are ~99% reproducible; moodboards/`--sref` are super-stable; `--no` negative prompts are **NOT compatible** with V8.1 (the API rejects jobs containing `--no` with `"--no is not compatible with --version 8.1"`) — use positive description or moodboards instead; `--oref`, `--cref`, and the V8 upscaler/editor are NOT YET available in V8.1 (Editor/Pan/Zoom still fall back to V6.1); a Global V7/V8 Personalization Profile MUST be unlocked before V8.1 will run.
 
 ---
 
@@ -60,7 +60,8 @@ elderly fisherman on weathered dock at dawn --v 8.1 --ar 3:2
 
 **Maximal pro prompt skeleton:**
 ```
-<IMG_URL_1> <IMG_URL_2> [SUBJECT][SUBJECT DETAILS], [CONTEXT/ENV], [STYLE/MOOD], [CAMERA/LENS/LIGHTING], "[QUOTED_TEXT_IF_ANY]" --v 8.1 --ar 16:9 --s 250 --c 15 --w 0 --iw 1.25 --sref <URL_OR_CODE> --sw 120 --p <profileID> --hd --no <excluded_items> --seed 12345
+<IMG_URL_1> <IMG_URL_2> [SUBJECT][SUBJECT DETAILS], [CONTEXT/ENV], [STYLE/MOOD], [CAMERA/LENS/LIGHTING], "[QUOTED_TEXT_IF_ANY]" --v 8.1 --ar 16:9 --s 250 --c 15 --w 0 --iw 1.25 --sref <URL_OR_CODE> --sw 120 --p <profileID> --hd --seed 12345
+# NOTE: --no is NOT compatible with --v 8.1. Express exclusions via positive description, moodboard, or post-process.
 ```
 
 ---
@@ -82,7 +83,7 @@ elderly fisherman on weathered dock at dawn --v 8.1 --ar 3:2
 | `--seed` | — | integer `0`–`4294967295` | random | ✅ Full | V8.1 seeds are ~99% reproducible (a major V8-series improvement). Use for A/B prompt iteration. |
 | `--stop` | — | `10`–`100` | `100` | ✅ Full | Stops generation early to get less-finished/sketchier outputs. |
 | `--tile` | — | flag | off | ⚠️ Known issue | Generates seamless repeating texture. V8.1 has a documented faint-border edge bug; Midjourney is working on a fix. Use V6.1/V7 if production-critical until patched. |
-| `--no` | — | comma-separated tokens (e.g. `--no text, frame, watermark`) | none | ✅ Full | Equivalent to `::-0.5` multi-prompt weight. Each comma-separated token is read independently. Avoid two-word negatives like `--no modern clothing` (parsed as `no modern` + `no clothing`, can trigger moderation). |
+| `--no` | — | comma-separated tokens (e.g. `--no text, frame, watermark`) | none | ❌ **NOT compatible with V8.1** | The V8.1 backend rejects any job containing `--no` with the error `"--no is not compatible with --version 8.1"`. Strip the parameter and express exclusions via (a) positive description ("documentary photography, naturalistic skin" instead of `--no anime, cartoon`), (b) a moodboard/profile tuned to exclude unwanted features, or (c) post-process in the Editor. Still supported on V7, V6.1, and Niji 7. |
 | `--iw` (image weight) | — | `0`–`2` (default `1`); some V-versions extend to `0`–`3` | `1` | ✅ Restored in V8.1 | Image prompts and image weights are back in V8.1 after being broken in V8.0. Increment by 0.25 when tuning. |
 | `--sref` | — | image URL(s) OR numeric style code(s) OR `random` | none | ✅ Full + super-stable in V8.1 | Multi-image: separate URLs with spaces. Codes work via `--sv 4` (pre-Jun 2025 V7 model), `--sv 6` (V6.1 codes), `--sv 7` (V8-series default, 4× faster/cheaper). Sref random is allowed only with `--sv 4` and `--sv 6`. |
 | `--sw` (style weight) | — | `0`–`1000` | `100` | ✅ Full | V8.1 sweet spot 50–150 for subtle, 150–300 for strong, 300+ for dominant. |
@@ -105,8 +106,8 @@ elderly fisherman on weathered dock at dawn --v 8.1 --ar 3:2
 SEGMENT_A ::W1 SEGMENT_B ::W2 SEGMENT_C ::W3
 ```
 - `::` is a hard divider; Midjourney processes each segment as an independent concept then composites.
-- Weight `W` is appended directly after `::` with no space. Default `W=1`. Decimals OK in V4+ family. Negative weights allowed (equivalent to `--no`) **only if the sum of all weights remains positive**.
-- **Caveat for V8.1:** Midjourney's own docs list multi-prompt compatibility as "versions 1, 2, 3, 4, Niji 4, 5, Niji 5, 6, Niji 6, 6.1." Multi-prompt `::` behavior in V7 and V8.x is undocumented and unreliable — prefer natural-language emphasis and `--no` in V8.1. Treat `::` as a legacy fallback, not a primary technique.
+- Weight `W` is appended directly after `::` with no space. Default `W=1`. Decimals OK in V4+ family. Negative weights allowed (equivalent to the legacy `--no` on pre-V8.1 versions) **only if the sum of all weights remains positive**.
+- **Caveat for V8.1:** Midjourney's own docs list multi-prompt compatibility as "versions 1, 2, 3, 4, Niji 4, 5, Niji 5, 6, Niji 6, 6.1." Multi-prompt `::` behavior in V7 and V8.x is undocumented and unreliable. Because `--no` is also incompatible with V8.1, the recommended V8.1 exclusion strategy is **positive description** ("documentary photography, real-world physics" in place of `--no anime, cartoon`) plus moodboard tuning — not `::` and not `--no`.
 
 ---
 
@@ -185,8 +186,9 @@ editor_for_v8_1_images:
 
 ### T1. Cinematic photoreal (recommended V8.1 default)
 ```
-[Shot type] [framing] of [subject phys. description], [action/pose], [costume], [setting/time-of-day], shot on [camera body] with [lens, aperture], [lighting style], [mood/atmosphere]
---v 8.1 --ar 16:9 --s 150 --style raw --p --no anime, illustration, painting, cartoon, drawing
+[Shot type] [framing] of [subject phys. description], [action/pose], [costume], [setting/time-of-day], shot on [camera body] with [lens, aperture], [lighting style], [mood/atmosphere], documentary photography, naturalistic color, real-world physics
+--v 8.1 --ar 16:9 --s 150 --style raw --p
+# V8.1 rejects --no. Bake exclusions into the positive description ("documentary photography, naturalistic" repels anime/illustration; "real-world physics" repels CGI/3D-render look).
 ```
 
 ### T2. Editorial portrait
@@ -197,8 +199,9 @@ editor_for_v8_1_images:
 
 ### T3. Product / commercial (literal)
 ```
-[Product] on [surface], [background style], [lighting setup], commercial product photography, sharp detail, [brand aesthetic adjective]
---v 8.1 --ar 1:1 --s 50 --style raw --no people, hands, text, watermark
+[Product] on [surface], unpopulated empty scene, [background style], [lighting setup], commercial product photography, sharp detail, [brand aesthetic adjective], clean unbranded surfaces, no signage
+--v 8.1 --ar 1:1 --s 50 --style raw
+# V8.1 rejects --no. Inline "unpopulated empty scene" and "clean unbranded surfaces, no signage" replace the legacy `--no people, hands, text, watermark`.
 ```
 
 ### T4. Concept art / fantasy
@@ -248,17 +251,22 @@ seamless [material] texture, [surface qualities], top-down macro detail
 # Known V8.1 edge-border bug — verify in a pattern checker before production use.
 ```
 
-### T11. Negative-prompt-heavy refinement (e.g., stripping AI artifacts)
+### T11. Positive-exclusion refinement (V8.1 replacement for negative-prompt-heavy workflows)
 ```
-[Subject], [scene], [lighting]
---v 8.1 --ar 3:2 --s 100 --style raw --no text, font, letters, watermark, signature, frame, border, blur, oversaturation, HDR, anime, cartoon, illustration, 3d render
+[Subject], [scene], [lighting], documentary photography, real-world physics, naturalistic color, clean unbranded surfaces, no text or signage in frame, full-bleed composition with no border or frame, sharp natural focus
+--v 8.1 --ar 3:2 --s 100 --style raw
+# V8.1 rejects --no. The positive-clause version above achieves the same artifact-stripping effect via description.
+# Anti-anime/cartoon: "documentary photography, real-world physics, naturalistic color"
+# Anti-text/watermark: "clean unbranded surfaces, no text or signage in frame"
+# Anti-frame/border: "full-bleed composition, edge-to-edge"
+# Anti-oversaturation/HDR: "naturalistic color, neutral grade"
 ```
 
 ### T12. Multi-prompt weighted composite (LEGACY — use sparingly in V8.1)
 ```
 [concept_A] ::2 [concept_B] ::1 [unwanted_concept] ::-0.5
 --v 8.1 --ar 16:9
-# Multi-prompt :: is officially documented only through 6.1; behavior in V8.1 is inconsistent. Prefer natural language + --no.
+# Multi-prompt :: is officially documented only through 6.1; behavior in V8.1 is inconsistent. --no is also rejected by V8.1. Prefer natural-language positive description in V8.1.
 ```
 
 ---
@@ -276,7 +284,7 @@ seamless [material] texture, [surface qualities], top-down macro detail
   <r7>NEVER stack quality keywords ("8k, ultradetailed, masterpiece, beautiful, stunning"). V7+ ignores or actively degrades on keyword spam. Write full clauses describing what is in the frame.</r7>
   <r8>ALWAYS use STRAIGHT double quotes `"..."` to mark in-image text. Keep quoted text ≤ 4 tokens for high success rate.</r8>
   <r9>ALWAYS lock aspect ratio early — V8.1 composes differently per ratio; switching mid-iteration usually invalidates the seed.</r9>
-  <r10>Two-word `--no` phrases parse as independent tokens. Avoid `--no modern clothing` (use `--no clothing` and add "vintage attire" to the positive prompt instead).</r10>
+  <r10>**`--no` is NOT compatible with V8.1.** The backend rejects jobs containing `--no` with `"--no is not compatible with --version 8.1"`. Express exclusions through positive description (e.g., "documentary photography, naturalistic" in place of `--no anime, cartoon`) or via a moodboard tuned to suppress unwanted features. The legacy guidance about two-word `--no` phrases parsing as independent tokens still applies on V7, V6.1, and Niji 7 — not V8.1.</r10>
   <r11>If using ONLY image prompts (no text), do NOT add `--stylize` or `--weird` — they are silently incompatible.</r11>
   <r12>When using a moodboard (`--p <mID>` or `--profile <mID>`), do NOT add `--sv`, `--sw`, or `--weird` — auto-stripped or unsupported.</r12>
   <r13>If `--exp ≥ 50`, do NOT also rely on `--stylize` or `--p` for look control — they will be overridden.</r13>
@@ -303,7 +311,7 @@ V8.1 weights early tokens most heavily. Construct prompts in this order:
 5. **Style / mood**: "documentary photography, contemplative"
 6. **Technical (camera / lens / lighting)**: "shot on Leica M11 with 50mm f/1.4, soft morning side-light"
 7. **In-image text (quoted)** if any: `"OPEN"`
-8. **Parameters**: `--v 8.1 --ar 3:2 --s 150 --style raw --p --no anime, illustration`
+8. **Parameters**: `--v 8.1 --ar 3:2 --s 150 --style raw --p`  *(do NOT add `--no` — incompatible with V8.1; bake exclusions like "documentary photography, naturalistic" into the positive description instead)*
 
 ---
 
@@ -315,10 +323,10 @@ V8.1 weights early tokens most heavily. Construct prompts in this order:
 | `--oref` / `--cref` not available — character consistency across images fails | Use V7 + `--oref` for character work; revert to V8.1 once V8 character ref ships. |
 | Editor / Pan / Zoom / Vary Region still rendering at V6.1 quality on V8.1 images | Plan final composition in the prompt; avoid heavy post-edits until V8 Editor ships. |
 | Occasional blurriness / pixelation in a minority of V8.1 outputs | Use feedback buttons in the lightbox; regenerate; or run as HD explicitly. |
-| Hands and bodies still occasionally distorted (improved vs V7 but not perfect) | Use `--no hands` or crop; or describe hand position precisely. |
+| Hands and bodies still occasionally distorted (improved vs V7 but not perfect) | `--no hands` is unavailable in V8.1 — instead crop hands out of frame in the composition ("torso-up framing, hands out of view"), describe hand position precisely ("hands resting at sides, fingers relaxed"), or fix in the V6.1-backed Editor post-render. |
 | Text rendering worse than V8.0 (Midjourney explicitly traded text quality for V7-aesthetic restoration) | Keep quoted text ≤ 4 words; do final typography in post; consider V8.0 if available specifically for text-heavy work. |
 | Long prompts auto-shortened invisibly, increasing variability | Keep prompts within the length limit (~limit not formally documented; community reports historical ~300 chars but V8.1 raises it). When the long-prompt icon appears, manually edit instead of relying on the Shortener. |
-| Multi-prompt `::` weighting unreliable in V8.1 | Prefer natural-language emphasis and `--no` rather than `::`. |
+| Multi-prompt `::` weighting unreliable in V8.1 | Both `::` and `--no` are unreliable/rejected on V8.1. Prefer pure natural-language emphasis and positive description; rely on moodboards/`--sref` for repeatable style control. |
 | Personalization required to even use V8.1 | Always advise unlocking Global V7/V8 Profile first. |
 | Aspect-ratio composition not transferable | Set `--ar` BEFORE iterating; treat ratio change as a new experiment. |
 | Stylize ≥ 500 returns smaller delta than expected (V8-family stylize range compression) | Anchor stylize in 100–400 band; reach beyond by adding `--exp 10–25` rather than pushing `--stylize`. |
@@ -357,12 +365,23 @@ sref_workflow:
   - Multi-sref blending: --sref URL1 URL2 (averages styles).
   - Combine moodboard + sref: --profile <mID> --sref <code> for project-consistent yet image-anchored output.
 
-negative_prompt_recipes:
-  remove_photo_realism_artifacts: --no anime, cartoon, illustration, painting, 3d render, CGI
-  clean_image: --no text, watermark, signature, frame, border, logo
-  natural_skin: --no makeup, filters, oversaturation, HDR
-  simple_composition: --no busy, cluttered, crowded
-  flat_graphic_look: --no blur, depth of field
+positive_exclusion_recipes:
+  # V8.1 rejects --no. Replace each legacy --no list with a positive-clause equivalent baked into the prompt body.
+  remove_photo_realism_artifacts:
+    legacy_v7:   "--no anime, cartoon, illustration, painting, 3d render, CGI"
+    v8_1_clause: "documentary photography, naturalistic color, real-world physics, photographic skin texture, no stylization"
+  clean_image:
+    legacy_v7:   "--no text, watermark, signature, frame, border, logo"
+    v8_1_clause: "clean unbranded surfaces, no text or signage in frame, full-bleed composition with no border or frame"
+  natural_skin:
+    legacy_v7:   "--no makeup, filters, oversaturation, HDR"
+    v8_1_clause: "bare unfiltered skin with visible pores and natural texture, neutral color grade, no makeup"
+  simple_composition:
+    legacy_v7:   "--no busy, cluttered, crowded"
+    v8_1_clause: "minimalist composition, empty negative space, single subject in frame"
+  flat_graphic_look:
+    legacy_v7:   "--no blur, depth of field"
+    v8_1_clause: "deep focus, hyperfocal sharpness from edge to edge, flat graphic rendering"
 ```
 
 ---
@@ -398,6 +417,7 @@ conversational_mode:
 | Native 2K | No | `--hd` (4× cost) | **Default** | No |
 | Speed vs V7 baseline | 1× | ~5× | ~4–5× | ~ |
 | Text rendering with quotes | Good | Best | Slightly worse than V8.0 | Good |
+| `--no` (negative prompt) | ✅ | ✅ | ❌ **rejected by backend** | ✅ |
 | `--oref` | ✅ | ✅ | ❌ (not yet) | ❌ |
 | `--cref` | ❌ | ❌ | ❌ | ❌ |
 | `--sref` stability | ✅ | unstable | ✅ super-stable | best |
@@ -424,7 +444,7 @@ conversational_mode:
 2. **Select model flag** → `--v 8.1` (default), `--v 7` (only for `--oref`/Editor work), or `--niji 7` (anime).
 3. **Pick template** (T1–T12 above) matching the intent.
 4. **Fill SUBJECT-first hierarchy** (see `<PROMPT_HIERARCHY>`).
-5. **Apply parameter recipe** from `<BEST_PRACTICES_V8_1>` (`--s`, `--style raw`, `--no`, etc.).
+5. **Apply parameter recipe** from `<BEST_PRACTICES_V8_1>` (`--s`, `--style raw`, etc.). Do NOT add `--no` for V8.1 — express exclusions through positive-clause description (see `positive_exclusion_recipes`).
 6. **Add reference layer** if user supplied images/codes/moodboards: `--sref`, `--p`, image URL + `--iw`.
 7. **Audit against `<RULES>`** — strip forbidden parameters, fix `--ar` decimals, ensure subject is described physically not by celebrity name.
 8. **Validate** prompt length is within typical limits; if longer, warn the user that Prompt Shortener will engage.
