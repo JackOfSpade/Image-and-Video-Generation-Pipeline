@@ -1,17 +1,21 @@
-Midjourney v8.1
+Midjourney
    │
    ▼
-Text / Numbers?
+ChatGPT Images
    │
-   ├── Yes ──▶ ChatGPT Images 2
-   │              │
-   └── No  ──▶ Nano Banana Pro
-                  │
-                  ▼
-        Output: 2K resolution image
-                  │
-                  ▼
-              Seedance 2
+   ▼
+Topaz Bloom / Topaz Photo
+   │
+   ▼
+Output resolution: 4K+.
+One-sheet storyboard or individual
+scenes for the clip.
+   │
+   ▼
+Seedance
 
-Tip: For longer / more complex sequences,
+Tip: For longer, more complex sequences,
      use a storyboard for fine control.
+   │
+   ▼
+Topaz Video / Topaz Astra (Creative mode)
