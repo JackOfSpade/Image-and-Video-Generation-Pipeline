@@ -1,0 +1,57 @@
+name: CI
+
+# NOTE: this repo has no test suite (hasRealTests=false) — it is almost
+# entirely Markdown/text documentation (Midjourney/Seedance/Suno/ElevenLabs
+# prompt guides, pipeline diagrams, a recommendations doc) with zero
+# application code: no package.json, requirements.txt, or any other build
+# manifest exists anywhere in the tree.
+#
+# The only executable logic in the whole repo is scripts/auto_merge_decision.sh
+# (the sourceable functions that gate .github/workflows/auto-merge-to-main.yml's
+# decision to fast-forward a branch into main and delete it), so this workflow
+# runs the most meaningful build/lint gate actually available instead of a
+# placeholder that always trivially succeeds:
+#
+#   - shellcheck over scripts/*.sh — lints the real merge/CI-gate decision
+#     logic (ci_conclusion_from_json / is_ci_green / is_ancestor_of).
+#   - actionlint over .github/workflows/*.yml — validates the workflow YAML
+#     schema itself, and (since shellcheck is present on the runner)
+#     transitively lints the `run:` shell blocks embedded in those workflows,
+#     including this file and auto-merge-to-main.yml.
+#
+# If a real test suite (e.g. bats tests for auto_merge_decision.sh) is ever
+# added, extend or replace this job to run it.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Shellcheck + actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shellcheck scripts/*.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          scripts=(scripts/*.sh)
+          if [ ${#scripts[@]} -eq 0 ]; then
+            echo "No scripts/*.sh files found; nothing to shellcheck."
+            exit 0
+          fi
+          shellcheck "${scripts[@]}"
+
+      - name: Install actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
+
+      - name: actionlint (workflow YAML and embedded shell steps)
+        shell: bash
+        run: ./actionlint -color
