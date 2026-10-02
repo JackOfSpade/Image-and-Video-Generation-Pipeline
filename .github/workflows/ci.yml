@@ -8,7 +8,7 @@ name: CI
 #
 # The only executable logic in the whole repo is scripts/auto_merge_decision.sh
 # (the sourceable functions that gate .github/workflows/auto-merge-to-main.yml's
-# decision to fast-forward a branch into main and delete it), so this workflow
+# decision to fast-forward a branch into main), so this workflow
 # runs the most meaningful build/lint gate actually available instead of a
 # placeholder that always trivially succeeds:
 #
@@ -27,31 +27,34 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Shellcheck + actionlint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Shellcheck scripts/*.sh
+      - name: Bash syntax check
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          scripts=(scripts/*.sh)
-          if [ ${#scripts[@]} -eq 0 ]; then
-            echo "No scripts/*.sh files found; nothing to shellcheck."
-            exit 0
-          fi
-          shellcheck "${scripts[@]}"
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n 1 bash -n
 
-      - name: Install actionlint
+      - name: Shellcheck all shell scripts
         shell: bash
         run: |
           set -euo pipefail
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 shellcheck -x --source-path=SCRIPTDIR
 
       - name: actionlint (workflow YAML and embedded shell steps)
-        shell: bash
-        run: ./actionlint -color
+        uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
